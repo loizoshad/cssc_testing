@@ -23,7 +23,7 @@ The code expects these networks to be under `networks/models/` and these demonst
 <u>CAUTION</u>:, if you unzip the data for reproducing the paper in the root directory of the project, your existing `demonstrations`, `networks`, and `networks_rby1'` folders will be replaced with the downloaded ones if you run this.
 ```bash
 curl -L -o files_for_paper_reproduction.zip https://github.com/loizoshad/cssc_testing/releases/download/data-v1/files_for_paper_reproduction.zip
-echo "<ADD HASH OF RELEASE> files_for_paper_reproduction.zip" | shasum -a 256 -c
+echo "f26ad015aa2cd56122ca5c0702027264a81ef93cd71693f6dacd90f7193165c1 files_for_paper_reproduction.zip" | shasum -a 256 -c
 unzip -q files_for_paper_reproduction.zip && rm files_for_paper_reproduction.zip
 ```
 

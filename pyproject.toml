@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cssc_testing"
+version = "0.1.0"
+readme = "README.md"
+requires-python = ">=3.10"
+# Loose requirements for `pip install -e .`; the exact versions used for the paper are in requirements.txt.
+dependencies = [
+    "torch>=2.6",
+    "numpy>=1.26,<2",
+    "scipy",
+    "matplotlib",
+    "pandas",
+    "roboticstoolbox-python",
+    "spatialmath-python",
+    "pytorch-kinematics",
+]
+
+[tool.setuptools.packages.find]
+include = ["utils*", "robots*", "data_augmentation*", "demonstration_generation*", "evaluation*", "examples*"]

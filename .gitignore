@@ -1,0 +1,51 @@
+# Datasets / Model checkpoints / ...
+*.h5
+*.hdf5
+*.npz
+*.npy
+*.pt
+*.pth
+*.pth.*
+*.ckpt
+*.safetensors
+*.onnx
+*.pkl
+*.pickle
+*.mat
+
+# Media / results / ...
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.tiff
+*.ppm
+*.mp4
+*.mov
+*.MOV
+*.avi
+*.mkv
+*.pdf
+*.eps
+
+# Editor / IDE / OS generated files / ...
+.vscode/
+.idea
+.DS_Store
+
+# Environments
+miniconda_env/
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info*
+build
+*.so
+*.dylib
+*.a
+*.o
+*.whl
+.pytest_cache/
+.ipynb_checkpoints/
+

@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot name="pendulum">
+  
+  <!-- LINKS -->
+  <link name="world"/>
+
+  <link name="link1">
+    <visual>
+      <geometry>
+        <box size="0.05 0.5 0.05"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0.025 0.25 0.025"/>
+      <material name="Blue">
+        <color rgba="0 0 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.05 0.5 0.05"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0.025 0.25 0.025"/>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.0 0.25 0.0"/>
+      <mass value="1."/>
+      <inertia ixx="0.005" ixy="0" ixz="0" iyy="0.005" iyz="0" izz="0.0025"/>
+    </inertial>
+  </link>
+
+  <link name="link2">
+    <visual>
+      <geometry>
+        <box size="0.05 0.5 0.05"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0.025 0.25 0.025"/>
+      <material name="Green">
+        <color rgba="0 1 0 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.05 0.5 0.05"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0.025 0.25 0.025"/>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.0 0.25 0.0"/>
+      <mass value="1."/>
+      <inertia ixx="0.005" ixy="0" ixz="0" iyy="0.005" iyz="0" izz="0.0025"/>
+    </inertial>
+  </link>
+
+  <link name="end_effector">
+    <visual>
+      <geometry>
+        <sphere radius="0.05"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0.025 0.025 0.025"/>
+      <material name="Red">
+        <color rgba="1 0 0 1"/>
+      </material>
+    </visual>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.0 0.25 0.0"/>
+      <mass value="1."/>
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>      
+  </link>
+
+
+  <!-- JOINTS -->
+  <joint name="joint1" type="revolute">
+    <limit lower="-30.14159" upper="30.14159" effort="1" velocity="1"/>
+    <parent link="world"/>
+    <child link="link1"/>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="1.0" friction="1.0"/>
+  </joint>
+
+  <joint name="joint2" type="revolute">
+    <limit lower="-30.14159" upper="30.14159" effort="1" velocity="1"/>
+    <parent link="link1"/>
+    <child link="link2"/>
+    <origin rpy="0 0 0" xyz="0 0.5 0"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="1.0" friction="1.0"/>
+  </joint>
+
+  <joint name="joint3" type="fixed">
+    <limit lower="-3.14159" upper="3.14159" effort="1" velocity="1"/>  <!-- ADDED LATER TO DEAL WITH PINOCCHIOS NUMBER OF JOINT VARIABLES. PINOCCHIO RECOGNIZED CONTINUES AS 2DoF -->
+    <parent link="link2"/>
+    <child link="end_effector"/>
+    <origin rpy="0 0 0" xyz="0 0.5 0"/>
+    <dynamics damping="1.0" friction="1.0"/>
+  </joint>
+
+</robot>

@@ -1,0 +1,11 @@
+#   conda env create -p ./miniconda_env -f environment.yml
+#   conda activate ./miniconda_env
+name: cssc
+channels:
+  - defaults
+dependencies:
+  - python=3.10.20
+  - pip
+  - pip:
+      - -r requirements.txt
+

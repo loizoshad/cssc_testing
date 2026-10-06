@@ -27,7 +27,7 @@ ROOT_DIR = Path(CURRENT_DIR).parent.parent.resolve()
 
 if __name__ == '__main__':
     ############################################################################################################
-    # Initialize pybullet and robot
+    # Initialize robot
     ############################################################################################################
     is_taskspace = False
     robot = create_two_arm_robot(nb_dofs_left=4, nb_dofs_right=4, nb_x_left=2, nb_x_right=2, ee_joint=False)

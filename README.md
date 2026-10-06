@@ -31,9 +31,9 @@ unzip -q files_for_paper_reproduction.zip && rm files_for_paper_reproduction.zip
 
 | Command | Reproduces | Time (MPS) | Output |
 |---|---|---|---|
-| `python -m evaluation.planar_robot_rmse_table` | Table II (RMSE values) | ~3 min on MPS| `results/planar_paper/cross_eval_rmse.csv` |
-| `python -m evaluation.planar_robot_writte_letter_plots` | Figures 4 and 5b | ~1 min on MPS | `results/planar_paper/figures/` |
-| `python -m evaluation.planar_robot_so2_density` | Figure 5a (SO(2) augmentation density) | ~30 min on MPS | `results/planar_paper/so2_density/` |
+| `planar_robot_rmse_table` | Table II (RMSE values) | ~3 min on MPS| `results/planar_paper/cross_eval_rmse.csv` |
+| `planar_robot_writte_letter_plots` | Figures 4 and 5b | ~1 min on MPS | `results/planar_paper/figures/` |
+| `lanar_robot_so2_density` | Figure 5a (SO(2) augmentation density) | ~30 min on MPS | `results/planar_paper/so2_density/` |
 
 ```bash
 python -m evaluation.planar_robot_rmse_table

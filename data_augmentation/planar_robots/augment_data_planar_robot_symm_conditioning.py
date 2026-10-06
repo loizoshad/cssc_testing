@@ -13,15 +13,38 @@ cols = shutil.get_terminal_size().columns
 np.set_printoptions(precision=4, suppress=True, linewidth=cols)
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-ROOT_DIR    = Path(CURRENT_DIR).parent.parent.resolve()
-device      = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+ROOT_DIR = Path(CURRENT_DIR).parent.parent.resolve()
+device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 print(f'device: {device}')
 
 
-# DT = np.deg2rad(1.0) # 
-# DT = np.deg2rad(2.0) #
 DT = np.deg2rad(5.0) # ~ 0.052
+IS_TASKSPACE = False
 
+DEMO_FOLDER = 'planar_robot_test_augm_density'
+DEMO_TYPE_LEFT  = 'LASA' 
+DEMO_NAME_LEFT  = 'CShape'
+DEMO_TYPE_RIGHT = 'LASA' 
+DEMO_NAME_RIGHT = 'NShape'
+
+## Choose group
+G = SO2()
+# G = Scaling2()
+# G = SO2Scaling2Group()
+# G = C2(permutator=np.array([1, 1]))
+# G = C2SO2Scaling2Group()
+
+## Choose augmentation strategy
+# USE_GRID=True -> two-step SO2 × Scaling2 grid augmentation
+# USE_C2=True -> three-step C2 × SO2 × Scaling2 grid (requires USE_GRID=True)
+# USE_GRID=False -> single-group strategy via GROUP_CONFIGS
+USE_GRID = False
+USE_C2   = False
+
+# theta_bound = 180 # degrees
+# scale_bound = 0.09
+theta_bound = 30 # degrees
+scale_bound = 0.8
 
 def augment_demonstrations_discrete(group, rep_in, rep_out, demonstrations: dict, augment_test: bool = False):
     """
@@ -70,12 +93,6 @@ def augment_demonstrations_discrete(group, rep_in, rep_out, demonstrations: dict
             augmented[f'{key}_demo_type'].extend([group_str] * len(new_in))
 
         print(f'  Generator applied — {len(new_in)} new test trajs | test total: {len(augmented["test_in"])}')
-
-    # # Overwrite all demo types to have the name "new_demo_name" # TODO: Just using to generate the C2SO2Scaling2 demos faster for testing purporses isntead of recomputing the SO2Scaling2
-    # new_demo_name = f'C2SO2Scaling2Group'
-    # for key in ['train_in_demo_type', 'train_out_demo_type', 'test_in_demo_type', 'test_out_demo_type']:
-    #     augmented[key] = [new_demo_name if demo_type != 'original' else 'original' for demo_type in augmented[key]]
-
 
     return augmented
 
@@ -168,20 +185,11 @@ def augment_demonstrations(group, rep_in, rep_out, demonstrations: dict, bounds:
             aug_in_list = [aug_in[t] for t in range(aug_in.shape[0])]
             aug_out_list = [aug_out[t] for t in range(aug_out.shape[0])]
 
-            # new_in.append(aug_in)
-            # new_out.append(aug_out)
-
             new_in += aug_in_list
             new_out += aug_out_list
 
         augmented['train_in'].extend(new_in)
         augmented['train_out'].extend(new_out)
-
-        # num_new = len(augmented['train_in']) - num_train_traj
-        # augmented['test_in'].extend( augmented['train_in'][num_train_traj:])
-        # augmented['test_out'].extend(augmented['train_out'][num_train_traj:])
-        # augmented['train_in']  = augmented['train_in'][:num_train_traj]
-        # augmented['train_out'] = augmented['train_out'][:num_train_traj]
 
         num_new = len(new_in)  # number of new trajectories added for this group element
         # for key in ['train_in', 'train_out', 'test_in', 'test_out']:
@@ -195,10 +203,9 @@ def augment_demonstrations(group, rep_in, rep_out, demonstrations: dict, bounds:
 
     return augmented
 
-
 def augment_so2_scaling2_grid(robot, demonstrations: dict, max_angle: float, min_scale: float, dt: float = 0.05):
     """
-    Two-step grid augmentation in SO2 × Scaling2 space.
+    Two-step grid augmentation in SO2 x Scaling2 space.
 
     Step 1: Apply ±max_angle SO2 rotations to the original demos via horizontal-lift
             integration (full_traj=True).  Each integration step is a distinct augmented
@@ -213,8 +220,8 @@ def augment_so2_scaling2_grid(robot, demonstrations: dict, max_angle: float, min
     The conditioning vector [angle, scale, reflection] is updated consistently:
     after Step 1 a demo has [θ, 1, 1]; after Step 2 it has [θ, s, 1].
     """
-    G       = SO2Scaling2Group()
-    rep_in  = SO2Scaling2DualArmConfigTaskRepIn( robot=robot, G=G, is_vf_constant=False, dt=dt)
+    G = SO2Scaling2Group()
+    rep_in = SO2Scaling2DualArmConfigTaskRepIn(robot=robot, G=G, is_vf_constant=False, dt=dt)
     rep_out = SO2Scaling2DualArmConfigTaskRepOut(robot=robot, G=G, is_vf_constant=False, dt=dt)
 
     for key in ['train_in', 'train_out']:
@@ -252,14 +259,12 @@ def augment_so2_scaling2_grid(robot, demonstrations: dict, max_angle: float, min
 
     augmented['train_in'].extend(so2_new_in)
     augmented['train_out'].extend(so2_new_out)
-    # augmented['train_in_demo_type'].extend( ['SO2'] * len(so2_new_in))
-    # augmented['train_out_demo_type'].extend(['SO2'] * len(so2_new_out))
     augmented['train_in_demo_type'].extend( ['SO2Scaling2Group'] * len(so2_new_in))
     augmented['train_out_demo_type'].extend(['SO2Scaling2Group'] * len(so2_new_out))    
 
     n_so2 = len(so2_new_in)
     print(f'Step 1 (SO2 ±{np.rad2deg(max_angle):.0f}°): {n_so2} demos '
-          f'({n_so2 // n_orig} per original × {n_orig} originals) [{time.perf_counter()-t0:.1f}s]')
+          f'({n_so2 // n_orig} per original x {n_orig} originals) [{time.perf_counter()-t0:.1f}s]')
 
     # ── Step 2: Scale each SO2-augmented demo from 1.0 down to min_scale ─────
     g_scale = torch.tensor(np.eye(2, dtype=np.float32) * min_scale, device=device)
@@ -293,10 +298,9 @@ def augment_so2_scaling2_grid(robot, demonstrations: dict, max_angle: float, min
 
     return augmented
 
-
 def augment_c2_so2_scaling2_grid(robot, demonstrations: dict, max_angle: float, min_scale: float, dt: float = 0.05):
     """
-    Three-step grid augmentation in C2 × SO2 × Scaling2 space.
+    Three-step grid augmentation in C2 semi SO2 x Scaling2 space.
 
     Step 1 & 2: Same as augment_so2_scaling2_grid — produces original + SO2 + SO2Scaling2 demos.
 
@@ -356,23 +360,9 @@ def augment_c2_so2_scaling2_grid(robot, demonstrations: dict, max_angle: float, 
 
     return augmented
 
-
-# scale_bound = 1.5 # Maximum working scale factor (before hitting singularities)
-# scale_bound = 0.05 # There doesn't seem to be an issue with gowing very small. I even tried 0.02 and it worked fine.
-
-theta_bound = 180 # degrees
-# scale_bound = 0.10
-scale_bound = 0.09
-
-
-# theta_bound = 60 # degrees
-# scale_bound = 0.2
-
 GROUP_CONFIGS = {
     'SO2': dict(
         bounds={'max_angle': np.deg2rad(theta_bound)},
-        # bounds={'max_angle': np.deg2rad(15)},
-        # bounds={'max_angle': np.deg2rad(5.0)},
         rep_in_cls=SO2DualArmConfigTaskRepIn,
         rep_out_cls=SO2DualArmConfigTaskRepOut,
         discrete=False,
@@ -394,88 +384,45 @@ GROUP_CONFIGS = {
         rep_in_cls=C2SO2Scaling2DualArmConfigTaskRepIn,
         rep_out_cls=C2SO2Scaling2DualArmConfigTaskRepOut,
         discrete=False,
-        rep_kwargs=dict(is_taskspace=False),
+        rep_kwargs=dict(is_taskspace=IS_TASKSPACE),
     ),
     'C2': dict(
         bounds={},
         rep_in_cls=C2DualArmConfigTaskRepIn,
         rep_out_cls=C2DualArmConfigTaskRepOut,
         discrete=True,
-        rep_kwargs=dict(is_taskspace=False),
+        rep_kwargs=dict(is_taskspace=IS_TASKSPACE),
     ),
 }
 
 
 if __name__ == '__main__':
-    is_taskspace = False
-    # robot = create_two_arm_robot(nb_dofs_left=2, nb_dofs_right=2, nb_x_left=2, nb_x_right=2, is_taskspace=is_taskspace)
-    robot = create_two_arm_robot(nb_dofs_left=4, nb_dofs_right=4, nb_x_left=2, nb_x_right=2)
+    robot = create_two_arm_robot(nb_dofs_left=4, nb_dofs_right=4, nb_x_left=2, nb_x_right=2, is_taskspace=IS_TASKSPACE)
 
     conditioning='symmetry'
     normalize_conditioning = False
 
-    # demo_folder     = 'planar_robot'
-    demo_folder = 'planar_robot_test_augm_density'
-    
-    demo_type_left  = 'LASA'; demo_name_left  = 'CShape'
-    demo_type_right = 'LASA'; demo_name_right = 'NShape'
-
-    # demo_type_left  = 'LASA'; demo_name_left  = 'NShape'
-    # demo_type_right = 'CUSTOM_DEMOS'; demo_name_right = 'point_fullstatic'
-    task = f'left-{demo_type_left}-{demo_name_left}_right-{demo_type_right}-{demo_name_right}_ndofs-{robot.nb_dofs}'
-    if is_taskspace:
+    task = f'left-{DEMO_TYPE_LEFT}-{DEMO_NAME_LEFT}_right-{DEMO_TYPE_RIGHT}-{DEMO_NAME_RIGHT}_ndofs-{robot.nb_dofs}'
+    if IS_TASKSPACE:
         task += '_taskspace'
 
-    # ── Choose augmentation strategy ─────────────────────────────────────────
-    # use_grid=True  → two-step SO2 × Scaling2 grid augmentation
-    # use_c2=True    → three-step C2 × SO2 × Scaling2 grid (requires use_grid=True)
-    # use_grid=False → single-group strategy via GROUP_CONFIGS
-
-    # use_grid = True
-    # use_c2   = True
-
-    # use_grid = False
-    # use_c2   = False
-
-    use_grid = False
-    use_c2   = False
-
     predefined_dataset = None
-    # predefined_dataset = f'left-LASA-CShape_right-LASA-NShape_ndofs-8_augmented_config_SO2Scaling2Group.npz' # TODO: Temp for quick testing of the C2SO2Scaling2 augmentation.
 
     data_vis = DataVisualizer(task=task, conditioning=conditioning, normalize_conditioning=normalize_conditioning)
-    demonstrations, _ = data_vis.construct_demonstrations(demo_folder=demo_folder, load_augmented_data=False, predefined_dataset=predefined_dataset)
+    demonstrations, _ = data_vis.construct_demonstrations(demo_folder=DEMO_FOLDER, load_augmented_data=False, predefined_dataset=predefined_dataset)
 
-    if use_grid and use_c2:
-        augmented = augment_c2_so2_scaling2_grid(
-            robot          = robot,
-            demonstrations = demonstrations,
-            max_angle      = np.deg2rad(theta_bound),
-            min_scale      = scale_bound,
-            dt             = DT,
-        )
+    if USE_GRID and USE_C2:
+        augmented = augment_c2_so2_scaling2_grid(robot = robot, demonstrations = demonstrations, max_angle = np.deg2rad(theta_bound), min_scale = scale_bound, dt = DT)
         save_name = f'{task}_augmented_config_C2SO2Scaling2Group.npz'
-    elif use_grid:
-        augmented  = augment_so2_scaling2_grid(
-            robot        = robot,
-            demonstrations = demonstrations,
-            max_angle    = np.deg2rad(theta_bound),
-            min_scale    = scale_bound,
-            dt           = DT,
-        )
+    elif USE_GRID:
+        augmented = augment_so2_scaling2_grid(robot = robot, demonstrations = demonstrations, max_angle = np.deg2rad(theta_bound), min_scale = scale_bound, dt = DT)
         save_name = f'{task}_augmented_config_SO2Scaling2Group.npz'
     else:
-        # G = C2(permutator=np.array([1, 1]))
-        G = SO2()
-        # G = Scaling2()
-        # G = SO2Scaling2Group()
-        # G = C2SO2Scaling2Group()
-
-        cfg        = GROUP_CONFIGS[f'{G}']
+        cfg = GROUP_CONFIGS[f'{G}']
         rep_kwargs = cfg.get('rep_kwargs', {})
-        dt         = rep_kwargs.pop('dt', DT)
-        rep_in     = cfg['rep_in_cls'](robot=robot, G=G, is_vf_constant=False, dt=dt, **rep_kwargs)
-        rep_out    = cfg['rep_out_cls'](robot=robot, G=G, is_vf_constant=False, dt=dt, **rep_kwargs)
+        dt = rep_kwargs.pop('dt', DT)
+        rep_in = cfg['rep_in_cls'](robot=robot, G=G, is_vf_constant=False, dt=dt, **rep_kwargs)
+        rep_out = cfg['rep_out_cls'](robot=robot, G=G, is_vf_constant=False, dt=dt, **rep_kwargs)
 
         if cfg['discrete']:
             augmented = augment_demonstrations_discrete(group=G, rep_in=rep_in, rep_out=rep_out, demonstrations=demonstrations)
@@ -486,7 +433,7 @@ if __name__ == '__main__':
 
     for key in ['train_in', 'train_out', 'test_in', 'test_out']:
         augmented[key] = [traj.cpu().numpy() for traj in augmented[key]]
-    np.savez(os.path.join(ROOT_DIR, 'demonstrations', demo_folder, save_name), demonstrations=augmented)
+    np.savez(os.path.join(ROOT_DIR, 'demonstrations', DEMO_FOLDER, save_name), demonstrations=augmented)
     print(f'Saved → {save_name}')
 
     

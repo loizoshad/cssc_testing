@@ -176,7 +176,6 @@ if __name__ == '__main__':
     robot = create_two_arm_robot(nb_dofs_left=4, nb_dofs_right=4, nb_x_left=2, nb_x_right=2, ee_joint=False)
 
     demo_folder = 'planar_robot/planar_robot_lasa'
-    
     demo_type_left = 'LASA'; demo_name_left = 'PShape'
     demo_type_right = 'LASA'; demo_name_right = 'NShape'
 

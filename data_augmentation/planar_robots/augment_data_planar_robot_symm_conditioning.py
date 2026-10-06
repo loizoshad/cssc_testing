@@ -21,7 +21,7 @@ print(f'device: {device}')
 DT = np.deg2rad(5.0) # ~ 0.052
 IS_TASKSPACE = False
 
-DEMO_FOLDER = 'planar_robot_test_augm_density'
+DEMO_FOLDER = 'planar_robot/planar_robot_lasa'
 DEMO_TYPE_LEFT  = 'LASA' 
 DEMO_NAME_LEFT  = 'CShape'
 DEMO_TYPE_RIGHT = 'LASA' 

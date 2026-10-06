@@ -29,11 +29,11 @@ unzip -q files_for_paper_reproduction.zip && rm files_for_paper_reproduction.zip
 
 ## 3. Reproduce the paper results (planar dual arm)
 
-| Command | Reproduces | Time (MPS) | Output |
+| Command | Reproduces | Time (min) on MPS | Output |
 |---|---|---|---|
-| `planar_robot_rmse_table` | Table II (RMSE values) | ~3 min on MPS| `results/planar_paper/cross_eval_rmse.csv` |
-| `planar_robot_writte_letter_plots` | Figures 4 and 5b | ~1 min on MPS | `results/planar_paper/figures/` |
-| `lanar_robot_so2_density` | Figure 5a (SO(2) augmentation density) | ~30 min on MPS | `results/planar_paper/so2_density/` |
+| `planar_robot_rmse_table` | Tab. II | ~3| `results/planar_paper/cross_eval_rmse.csv` |
+| `planar_robot_writte_letter_plots` | Fig. 4 & 5b | ~1 | `results/planar_paper/figures/` |
+| `lanar_robot_so2_density` | Fig. 5a | ~30 | `results/planar_paper/so2_density/` |
 
 ```bash
 python -m evaluation.planar_robot_rmse_table

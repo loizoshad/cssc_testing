@@ -17,6 +17,23 @@ ROOT_DIR    = Path(CURRENT_DIR).parent.parent.resolve()
 device      = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 print(f'device: {device}')
 
+
+### Select group
+
+## pan_v1 dataset (xyz_theta task space): # These carry their own task_space/demo_folder/task so TASK_SPACE above does not need to be changed when switching between pan and letters.
+# GROUP_NAME = 'C2Pan'
+GROUP_NAME = 'SO2Pan'
+# GROUP_NAME = 'C2SO2Pan'
+
+## letters dataset (yz_in_6d task space)
+# GROUP_NAME = 'SO2Letters'
+# GROUP_NAME = 'Scaling2Letters'
+# GROUP_NAME = 'C2Letters'
+# GROUP_NAME = 'SO2Scaling2Letters'
+# GROUP_NAME = 'C2SO2Scaling2Letters'
+
+
+
 # Pan dataset constants (task_space='xyz_theta')
 _PAN_TASK   = 'left-rby1-all_right-rby1-all_ndofs-14'
 _PAN_FOLDER = 'rby1_pan_v1'
@@ -536,32 +553,10 @@ GROUP_CONFIGS = {
 
 
 if __name__ == '__main__':
-    # ── Select group ─────────────────────────────────────────────────────────
-    # ── pan_v1 dataset (xyz_theta task space) — self-contained pan configs ───
-    # These carry their own task_space/demo_folder/task so TASK_SPACE above
-    # does not need to be changed when switching between pan and letters.
-    group_name = 'C2Pan'
-    # group_name = 'SO2Pan'
-    # group_name = 'C2SO2Pan'
-
-    # ── pan_v1 dataset — generic configs (use TASK_SPACE = 'xyz_theta' above) ─
-    # group_name = 'C2RBY1'
-    # group_name = 'SO2RBY1'
-    # group_name = 'C2SO2RBY1'
-    # group_name = 'Scaling2RBY1'
-    # group_name = 'C2Scaling2RBY1'
-
-    # ── letters dataset (yz_in_6d task space) ────────────────────────────────
-    # group_name = 'SO2Letters'
-    # group_name = 'Scaling2Letters'
-    # group_name = 'C2Letters'
-    # group_name = 'SO2Scaling2Letters'
-    # group_name = 'C2SO2Scaling2Letters'
-
-    conditioning           = 'symmetry'
+    conditioning = 'symmetry'
     normalize_conditioning = False
 
-    cfg        = GROUP_CONFIGS[group_name]
+    cfg        = GROUP_CONFIGS[GROUP_NAME]
     # Per-config overrides (letters configs carry their own task_space / folder / task)
     task_space  = cfg.get('task_space',  TASK_SPACE)
     demo_folder = cfg.get('demo_folder', 'rby1_pan_v1')
@@ -582,7 +577,7 @@ if __name__ == '__main__':
 
     # ── Compute per-arm letter centers (letters groups only) ─────────────────
     _LETTER_GROUPS = {'SO2Letters', 'Scaling2Letters', 'SO2Scaling2Letters', 'C2SO2Scaling2Letters'}
-    if group_name in _LETTER_GROUPS:
+    if GROUP_NAME in _LETTER_GROUPS:
         center_left, center_right = compute_letter_centers(task, demo_folder)
         print(f'Letter EE centers (convex-hull centroid):')
         print(f'  left  arm: y={center_left[0]:.4f}  z={center_left[1]:.4f}')

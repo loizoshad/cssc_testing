@@ -15,6 +15,20 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = Path(CURRENT_DIR).parent.parent
 
 
+#################################################################################
+# Configure these parameters to generate the desired dataset
+#################################################################################
+DEMO_TYPE = 'LASA'
+DEMO_NAME_LEFT = 'CShape'
+DEMO_NAME_RIGHT = 'NShape'
+
+IS_TASKSPACE = False
+ARM_LENGTH = 3.0
+NB_DOFS = 4
+DT = 0.01
+SAVE_DATA_FLAG = True
+ANIMATE_ROBOT_FLAG = False
+
 
 #################################################################################
 # Auxiliary classes and methods
@@ -221,23 +235,8 @@ def preprocess_dataset(demos_data, scale_bound, shift, window_size=5, smoothen_c
     demos_data, _ = normalize_and_shift_raw_dataset(demos_data, bound=scale_bound, shift=shift)
 
     # Remove the first n and last m entries of each trajectory to avoid large velocities at the beginning and end of the trajectories
-
-    # Remove the first n and last m entries of each trajectory again to avoid large velocities at the beginning and end of the trajectories after smoothing
-    # # NOTE: Good
-    # n = 15
-    # m = 20
-
-    # n = 15
-    # m = 2
-
-    # n = 5
-    # m = 2
-
     n = 10
     m = 2   
-    
-    # n = 100
-    # m = 2     
 
     demos_data = [demo[n:-m, :] for demo in demos_data]
 
@@ -263,27 +262,13 @@ def get_taskspace_from_config(q_traj, dq_traj, robot):
 # Main code
 #################################################################################
 def main():
-    is_taskspace = False
-    arm_length = 3.0
-    nb_dofs = 4
-    dt = 0.01
-    save_data_flag = True
-    animate_robot_flag = False
-
-    #################################
-    # Left arm (Robot 1)
-    #################################
-    demo_type = 'LASA'    
-    demo_name_left = 'CShape'
-    demo_name_right = 'NShape'
-
-    left_arm_demos = generate_arm_demos(arm_setup('left', nb_dofs, demo_name_left, is_taskspace), demo_type, demo_name_left, nb_dofs, arm_length, dt, is_taskspace=is_taskspace)
-    right_arm_demos = generate_arm_demos(arm_setup('right', nb_dofs, demo_name_right, is_taskspace), demo_type, demo_name_right, nb_dofs, arm_length, dt, is_taskspace=is_taskspace)
+    left_arm_demos = generate_arm_demos(arm_setup('left', NB_DOFS, DEMO_NAME_LEFT, IS_TASKSPACE), DEMO_TYPE, DEMO_NAME_LEFT, NB_DOFS, ARM_LENGTH, DT, is_taskspace=IS_TASKSPACE)
+    right_arm_demos = generate_arm_demos(arm_setup('right', NB_DOFS, DEMO_NAME_RIGHT, IS_TASKSPACE), DEMO_TYPE, DEMO_NAME_RIGHT, NB_DOFS, ARM_LENGTH, DT, is_taskspace=IS_TASKSPACE)
 
     ##################################################################
     # Visualize demos
     ##################################################################
-    num_plots = nb_dofs * 2 + 4 # Joint positions, joint velocities, end-effector positions, end-effector velocities
+    num_plots = NB_DOFS * 2 + 4 # Joint positions, joint velocities, end-effector positions, end-effector velocities
     max_cols = 4
     num_cols = min(num_plots, max_cols)
     num_rows = (num_plots + num_cols - 1) // num_cols
@@ -295,14 +280,14 @@ def main():
     plt.show()
 
     # Animate the robot
-    if animate_robot_flag:
+    if ANIMATE_ROBOT_FLAG:
         fig, ax = plt.subplots(figsize=(8, 8))
-        visualizer = RobotVisualizer(ax, arm_length, ee_joint=False)
+        visualizer = RobotVisualizer(ax, ARM_LENGTH, ee_joint=False)
         animate_robot(ax, visualizer, left_arm_demos.q, left_arm_demos.x, right_arm_demos.q, right_arm_demos.x)
 
     # Save data
-    if save_data_flag:
-        merge_and_save_data(left_arm_demos.q, left_arm_demos.dq, left_arm_demos.x, right_arm_demos.q, right_arm_demos.dq, right_arm_demos.x, demo_type, demo_name_left, demo_type, demo_name_right, nb_dofs, is_taskspace=is_taskspace)
+    if SAVE_DATA_FLAG:
+        merge_and_save_data(left_arm_demos.q, left_arm_demos.dq, left_arm_demos.x, right_arm_demos.q, right_arm_demos.dq, right_arm_demos.x, DEMO_TYPE, DEMO_NAME_LEFT, DEMO_TYPE, DEMO_NAME_RIGHT, NB_DOFS, is_taskspace=IS_TASKSPACE)
 
 
 if __name__ == "__main__":

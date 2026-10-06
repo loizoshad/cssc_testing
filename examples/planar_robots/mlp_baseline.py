@@ -173,13 +173,11 @@ if __name__ == '__main__':
     # Initialize pybullet and robot
     ############################################################################################################
     is_taskspace = False
-    # robot = create_two_arm_robot(nb_dofs_left=2, nb_dofs_right=2, nb_x_left=2, nb_x_right=2, ee_joint=False, is_taskspace=is_taskspace)
     robot = create_two_arm_robot(nb_dofs_left=4, nb_dofs_right=4, nb_x_left=2, nb_x_right=2, ee_joint=False)
 
-    # demo_folder = 'planar_robot'
-    demo_folder = 'planar_robot_test_augm_density'
+    demo_folder = 'planar_robot/planar_robot_lasa'
     
-    demo_type_left = 'LASA'; demo_name_left = 'CShape'
+    demo_type_left = 'LASA'; demo_name_left = 'PShape'
     demo_type_right = 'LASA'; demo_name_right = 'NShape'
 
     # Load the dual arm data with name following the convention: demos_name = f'left-{demo_type_left}-{demo_name_left}_right-{demo_type_right}-{demo_name_right}_ndofs-{nb_dofs}.npz'
@@ -188,7 +186,8 @@ if __name__ == '__main__':
     ############################################################################################################
     # Network settings
     ############################################################################################################    
-    num_iterations = 100000
+    # num_iterations = 100000
+    num_iterations = 1000
 
     step = 5.0 # This doesn't matter for the baseline network. It is about data augmentation which we are not doing here.
 
@@ -206,10 +205,6 @@ if __name__ == '__main__':
     decouple_arms = True
     isotropic_normalization = False
 
-    # conditioning=None
-    # normalize_conditioning = False
-    # conditioning='goal'
-    # normalize_conditioning = True
     conditioning='symmetry'
     normalize_conditioning = False
 
@@ -234,8 +229,8 @@ if __name__ == '__main__':
     data_vis = DataVisualizer(task=task, isotropic_normalization=isotropic_normalization, conditioning=conditioning, normalize_conditioning=normalize_conditioning)
     demonstrations, demonstrations_normalized = data_vis.construct_demonstrations(demo_folder=demo_folder, load_augmented_data=False, predefined_dataset=predefined_dataset)
 
-    so2_train_step       = np.deg2rad(step)          # one training angle every 20°
-    scaling_train_values = list(np.arange(1.0, 0.1-0.01, -np.deg2rad(step)))  # 5 evenly spaced scaling values from 0.1 to 1.0
+    so2_train_step = np.deg2rad(step)          # e.g., one training angle every 20°
+    scaling_train_values = list(np.arange(1.0, 0.1-0.01, -np.deg2rad(step)))  # e.g., 5 evenly spaced scaling values from 0.1 to 1.0
     demonstrations, demonstrations_normalized = split_train_test(
         demonstrations, demonstrations_normalized,
         so2_train_step=so2_train_step,
@@ -245,46 +240,24 @@ if __name__ == '__main__':
         max_demos_per_cell=5,       # or e.g. 5  to cap demos per (SO2, Scaling2) cell
         axis_match_tolerance=np.deg2rad(step) / 2,   # half the augmentation step
     )
-    network = CustomMLP(model_id=model_id, load_model_flag=load_model_flag, save_model_flag=save_model_flag, 
-                        demonstrations=demonstrations_normalized, 
-                        robot=robot)
+    network = CustomMLP(model_id=model_id, load_model_flag=load_model_flag, save_model_flag=save_model_flag, demonstrations=demonstrations_normalized, robot=robot)
 
     model = network.model
     data_vis.set_network(network)
     ############################################################################################################
     # Train or load network
     ############################################################################################################
-    # Print normalization bounds before training:
-    print("Normalization bounds before training:")
-    print(f'inp_min:', demonstrations_normalized['inp_min'])
-    print(f'inp_max:', demonstrations_normalized['inp_max'])
-    print("out_min:", demonstrations_normalized['Dq_min'])
-    print("out_max:", demonstrations_normalized['Dq_max'])
-
     if train:
-        network.train_network(robot, num_iterations=num_iterations, steps=nb_steps, stride=stride, verbose=True, batch_size=batch_size, verbose_every=500, decouple_arms=decouple_arms)
+        network.train_network(robot, num_iterations=num_iterations, steps=nb_steps, stride=stride, verbose=True, batch_size=batch_size, verbose_every=100, decouple_arms=decouple_arms)
     if network.save_model_flag:
         network.save_model(model_id=network.model_id)
-
-
-
-    # exit()
-
-
-    # data_vis.plot_loss_history(network, save_plots=False)
-    ############################################################################################################
-    # Evaluate network's performance - 1-step predictions on train and test data
-    ############################################################################################################
-    # data_vis.plot_1step_predictions(network, len(demonstrations['train_in']), save_plots=save_plots)
 
     # ###########################################################################################################
     # Evaluate network's performance - Full trajectory simulation
     # ###########################################################################################################
     horizon = min([traj.shape[0] for traj in network.demonstrations['train_in']])
 
-    goal_conditioned = True if conditioning == 'goal' else False
-
-    #### V1: Choose randomly
+    #### Choose randomly
     demo_config_train = dict(
         demo_labels=['original', 'SO2', 'Scaling2', 'SO2Scaling2Group', 'C2SO2Scaling2Group'],
         num_of_demos = [2, 0, 0, 0, 0]
@@ -294,264 +267,12 @@ if __name__ == '__main__':
         num_of_demos = [2, 0, 0, 0, 0]
     )    
 
-    goal_conditioned = True if conditioning == 'goal' else False
 
     demonstrations_eval_test = choose_demos_for_evaluation(network.demonstrations, config=demo_config_test, use_train = False)
     demonstrations_eval_train = choose_demos_for_evaluation(network.demonstrations, config=demo_config_train, use_train = True)
 
-    evaluate_full_trajectory(network, data_vis, robot, horizon, demonstrations_eval_test, demonstrations_eval_train, title_prefix='Full Evaluation', save_plots=save_plots, save_trajs=False, goal_conditioned=goal_conditioned)
+    evaluate_full_trajectory(network, data_vis, robot, horizon, demonstrations_eval_test, demonstrations_eval_train, title_prefix='Full Evaluation', save_plots=save_plots, save_trajs=False, goal_conditioned=False)
         
     plt.show()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# import os
-# import copy
-# from pathlib import Path
-# import numpy as np
-# import random
-# import torch
-# import shutil # Just making things prettier when printing in the console
-# import matplotlib.pyplot as plt
-
-# from utils.groups import *
-# from utils.utils import *
-# from utils.networks_pytorch import CustomMLP
-# from utils.robot_vis import PlanarRobotVisualizer
-
-# cols = shutil.get_terminal_size().columns
-# np.set_printoptions(precision = 8, suppress = True, linewidth=cols)
-# # seed = np.random.randint(0, 2**32)
-# seed = 42
-# # seed: 249831868 # 20001 2D
-
-# # seed = 249831868 # 20001 2D and 4D but 4D is with 20 steps
-
-# # seed = 63724918 # 20001 2D and 4D but 4D is with 20 steps
-
-# # seed = 7223598  # 20001
-
-# # seed = 32482183 # 20001
-
-
-# print('seed:', seed)
-# torch.manual_seed(seed)
-# torch.cuda.manual_seed_all(seed)
-# np.random.seed(seed)
-# random.seed(seed)
-
-# CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-# ROOT_DIR = Path(CURRENT_DIR).parent.parent.resolve()
-
-# if __name__ == '__main__':
-#     ############################################################################################################
-#     # Initialize pybullet and robot
-#     ############################################################################################################
-#     is_taskspace = False
-#     # robot = create_two_arm_robot(nb_dofs_left=2, nb_dofs_right=2, nb_x_left=2, nb_x_right=2, ee_joint=False, is_taskspace=is_taskspace)
-#     robot = create_two_arm_robot(nb_dofs_left=4, nb_dofs_right=4, nb_x_left=2, nb_x_right=2, ee_joint=False)
-
-#     demo_folder = 'planar_robot'
-    
-#     demo_type_left = 'LASA'; demo_name_left = 'CShape'
-#     demo_type_right = 'LASA'; demo_name_right = 'NShape'
-
-#     # demo_type_left = 'LASA'; demo_name_left = 'PShape'
-#     # demo_type_right = 'LASA'; demo_name_right = 'CShape'
-        
-#     # demo_type_left = 'LASA'; demo_name_left = 'PShape'
-#     # demo_type_right = 'LASA'; demo_name_right = 'SShape'
-    
-#     # demo_type_left = 'LASA'; demo_name_left = 'CShape'
-#     # demo_type_right = 'LASA'; demo_name_right = 'SShape'
-    
-#     # Load the dual arm data with name following the convention: demos_name = f'left-{demo_type_left}-{demo_name_left}_right-{demo_type_right}-{demo_name_right}_ndofs-{nb_dofs}.npz'
-#     task = f'left-{demo_type_left}-{demo_name_left}_right-{demo_type_right}-{demo_name_right}_ndofs-{robot.nb_dofs}'
-#     task = task + '_taskspace' if is_taskspace else task
-#     ############################################################################################################
-#     # Network settings
-#     ############################################################################################################    
-#     margin=1e-10
-#     # margin=0.05
-#     # margin=0.1
-
-
-#     # num_iterations = 20000
-#     # num_iterations = 200
-#     # num_iterations = 20000
-
-#     # num_iterations = 4000
-    
-#     # num_iterations = 20000
-#     # num_iterations = 20001
-
-#     num_iterations = 5000
-#     # num_iterations = 20002
-
-
-#     # num_iterations = 8000
-
-#     # num_iterations = 20001
-#     # num_iterations = 7001
-
-
-#     # nb_steps = 5
-#     # stride = 1
-
-#     ## Failed for 4 DoF on the 20k sample at least
-#     # nb_steps = 10
-#     # stride = 5
-
-#     # nb_steps = 20
-#     # stride = 5
-
-
-#     # nb_steps = 50
-#     # stride = 5
-
-#     # nb_steps = 10
-#     # stride = 10
-
-#     nb_steps = 15
-#     stride = 10
-
-
-#     batch_size = 250
-    
-#     train = True
-#     load_model_flag = False
-#     save_model_flag = True
-#     save_plots = True
-#     save_loss = True
-
-#     # decouple_arms = True
-#     decouple_arms = True
-#     isotropic_normalization = False
-
-
-#     # conditioning=None
-#     # normalize_conditioning = False
-#     # conditioning='goal'
-#     # normalize_conditioning = True
-#     conditioning='symmetry'
-#     normalize_conditioning = False
-
-#     task_space_loss = False
-
-#     ## Fully trained model id
-#     model_id = f'MLP_BASELINE_{task}_epochs={str(num_iterations)}_nsteps={str(nb_steps)}_stride={stride}' + f'norm_bounds={margin}_'
-
-#     if decouple_arms:
-#         model_id += 'decoupled'
-#     else:
-#         model_id += 'coupled'
-
-#     # Add the condioning type to the model
-#     model_id += f'_conditioning={conditioning}' if conditioning is not None else '_no_conditioning'
-#     model_id += f'_normalize_conditioning={normalize_conditioning}' if normalize_conditioning else ''
-#     model_id += f'_task_space_loss' if task_space_loss else ''
-#     # add the seed
-#     model_id += f'_seed={seed}_'
-
-#     # ## Intermediate model ids
-#     # model_id = f'MLP_BASELINE_{G}_{task}_epochs={str(num_iterations)}_nsteps={str(nb_steps)}_iter1600'
-
-
-#     # predefined_dataset = ROOT_DIR / 'demonstrations' / demo_folder / f'left-LASA-CShape_right-LASA-NShape_ndofs-8_augmented_config_SO2.npz'
-#     predefined_dataset = None
-#     ############################################################################################################
-#     # Get data and initialize network
-#     ############################################################################################################
-#     data_vis = DataVisualizer(task=task, isotropic_normalization=isotropic_normalization, margin=margin, conditioning=conditioning, normalize_conditioning=normalize_conditioning)
-#     demonstrations, demonstrations_normalized = data_vis.construct_demonstrations(demo_folder=demo_folder, load_augmented_data=False, predefined_dataset=predefined_dataset)
-
-#     # exit()
-#     # demonstrations, demonstrations_normalized = data_vis.rearrange_demonstrations(demonstrations, demonstrations_normalized, train_demo_types=['original'], num_train_demos_per_type=[7])
-
-#     network = CustomMLP(model_id=model_id, load_model_flag=load_model_flag, save_model_flag=save_model_flag, 
-#                         demonstrations=demonstrations_normalized, 
-#                         robot=robot)
-
-#     model = network.model
-#     data_vis.set_network(network)
-#     ############################################################################################################
-#     # Train or load network
-#     ############################################################################################################
-#     # Print normalization bounds before training:
-#     print("Normalization bounds before training:")
-#     # print("Q_min:", demonstrations_normalized['Q_min'])
-#     # print("Q_max:", demonstrations_normalized['Q_max'])
-#     # print("X_min:", demonstrations_normalized['X_min'])
-#     # print("X_max:", demonstrations_normalized['X_max'])
-#     print(f'inp_min:', demonstrations_normalized['inp_min'])
-#     print(f'inp_max:', demonstrations_normalized['inp_max'])
-#     print("out_min:", demonstrations_normalized['Dq_min'])
-#     print("out_max:", demonstrations_normalized['Dq_max'])
-
-#     if train:
-#         network.train_network(robot, num_iterations=num_iterations, steps=nb_steps, stride=stride, verbose=True, batch_size=batch_size, verbose_every=500, decouple_arms=decouple_arms, task_space_loss=task_space_loss)
-#     if network.save_model_flag:
-#         network.save_model(model_id=network.model_id)
-
-
-
-#     # data_vis.plot_loss_history(network, save_plots=False)
-#     ############################################################################################################
-#     # Evaluate network's performance - 1-step predictions on train and test data
-#     ############################################################################################################
-#     data_vis.plot_1step_predictions(network, len(demonstrations['train_in']), save_plots=save_plots)
-
-#     # ###########################################################################################################
-#     # Evaluate network's performance - Full trajectory simulation
-#     # ###########################################################################################################
-#     horizon = min([traj.shape[0] for traj in network.demonstrations['train_in']])
-
-
-#     demo_config = dict(
-#         demo_labels=['original', 'SO2', 'Scaling2', 'SO2Scaling2Group', 'C2SO2Scaling2Group'],
-#         num_of_demos = [7, 0, 0, 0, 0]
-#     )
-
-#     demonstrations_eval = choose_demos_for_evaluation(network.demonstrations, config=demo_config)
-#     demonstrations_eval_ = [demonstrations_eval[0]]
-#     goal_conditioned = True if conditioning == 'goal' else False
-#     evaluate_full_trajectory(network, data_vis, robot, horizon, demonstrations_eval, demonstrations_eval_, title_prefix='Full Evaluation', save_plots=save_plots, save_trajs=False, goal_conditioned=goal_conditioned)
-#     plt.show()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

@@ -19,7 +19,7 @@ ROOT_DIR = Path(CURRENT_DIR).parent.parent
 # Configure these parameters to generate the desired dataset
 #################################################################################
 DEMO_TYPE = 'LASA'
-DEMO_NAME_LEFT = 'CShape'
+DEMO_NAME_LEFT = 'PShape'
 DEMO_NAME_RIGHT = 'NShape'
 
 IS_TASKSPACE = False

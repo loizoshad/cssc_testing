@@ -23,7 +23,7 @@ IS_TASKSPACE = False
 
 DEMO_FOLDER = 'planar_robot/planar_robot_lasa'
 DEMO_TYPE_LEFT  = 'LASA' 
-DEMO_NAME_LEFT  = 'CShape'
+DEMO_NAME_LEFT  = 'PShape'
 DEMO_TYPE_RIGHT = 'LASA' 
 DEMO_NAME_RIGHT = 'NShape'
 

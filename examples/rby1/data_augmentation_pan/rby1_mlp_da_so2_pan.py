@@ -10,14 +10,11 @@ import matplotlib.pyplot as plt
 from utils.groups import *
 from utils.utils import *
 from utils.networks_pytorch import CustomMLP
-from utils.robot_vis import PlanarRobotVisualizer
 
 cols = shutil.get_terminal_size().columns
 np.set_printoptions(precision=8, suppress=True, linewidth=cols)
-# seed = np.random.randint(0, 2**32)
 seed = 42
 
-print('seed:', seed)
 torch.manual_seed(seed)
 torch.cuda.manual_seed_all(seed)
 np.random.seed(seed)
@@ -32,44 +29,40 @@ if __name__ == '__main__':
     # Initialize robot
     ############################################################################################################
     is_taskspace = False
-    TASK_SPACE   = 'xyz_theta'   # [x, y, z, yaw] per arm — planar pan experiment
-    robot        = create_rby1_robot(task_space=TASK_SPACE, ee_joint=False, is_taskspace=is_taskspace)
-    demo_folder  = 'rby1_pan_v1'
-    task         = 'left-rby1-all_right-rby1-all_ndofs-14'
-    task         = task + '_taskspace' if is_taskspace else task
+    TASK_SPACE = 'xyz_theta'   # [x, y, z, yaw] per arm — planar pan experiment
+    robot = create_rby1_robot(task_space=TASK_SPACE, ee_joint=False, is_taskspace=is_taskspace)
+    demo_folder = 'rby1_pan_v1'
+    task = 'left-rby1-all_right-rby1-all_ndofs-14'
+    task = task + '_taskspace' if is_taskspace else task
 
     ############################################################################################################
     # Network settings
     ############################################################################################################
-    num_iterations = 25000
+    # num_iterations = 25000
+    num_iterations = 1000
 
-    step     = 5.0      # augmentation step in degrees
+    step = 5.0 # augmentation step in degrees
     nb_steps = 15
-    stride   = 10
+    stride = 10
 
     batch_size = 250
 
-    train           = True
+    train = True
     load_model_flag = False
     save_model_flag = True
-    save_plots      = True
-    save_loss       = True
+    save_plots = True
+    save_loss = True
 
-    data_augmentation  = True
-    decouple_arms      = True
+    data_augmentation = True
+    decouple_arms = True
 
-    conditioning           = 'symmetry'
+    conditioning = 'symmetry'
     normalize_conditioning = False
 
     dt = np.deg2rad(1.0)
     G  = SO2RBY1()
 
-    # Use CompositeRepIn with center_on_ee=True so each arm rotates around its
-    # own initial EE position (x0, y0) rather than the global origin.
-    # _so2_xyz_theta_vf: dx=-(y-y0), dy=(x-x0), dz=0 (frozen), dyaw=1 (co-rotates).
-    kw = dict(G=G, robot=robot, dt=dt, morph=False, dt_so2=dt,
-              left_spec =ArmSymSpec(so2=True, task_space=TASK_SPACE, center_on_ee=True),
-              right_spec=ArmSymSpec(so2=True, task_space=TASK_SPACE, center_on_ee=True))
+    kw = dict(G=G, robot=robot, dt=dt, morph=False, dt_so2=dt, left_spec =ArmSymSpec(so2=True, task_space=TASK_SPACE, center_on_ee=True), right_spec=ArmSymSpec(so2=True, task_space=TASK_SPACE, center_on_ee=True))
     rep_in  = CompositeRepIn(**kw)
     rep_out = CompositeRepOut(**kw)
 
@@ -103,16 +96,9 @@ if __name__ == '__main__':
         num_original = sum(1 for t in demonstrations['train_in_demo_type'] if 'original' in t)
         num_so2      = sum(1 for t in demonstrations['train_in_demo_type'] if 'SO2RBY1' in t)
         print(f' Num of demos per type: original={num_original}, SO2RBY1={num_so2}')
-        demonstrations, demonstrations_normalized = data_vis.rearrange_demonstrations(
-            demonstrations, demonstrations_normalized,
-            train_demo_types=['original', f'{G}'],
-            num_train_demos_per_type=[num_original, num_so2])
+        demonstrations, demonstrations_normalized = data_vis.rearrange_demonstrations(demonstrations, demonstrations_normalized, train_demo_types=['original', f'{G}'], num_train_demos_per_type=[num_original, num_so2])
 
-    network = CustomMLP(model_id=model_id,
-                        load_model_flag=load_model_flag,
-                        save_model_flag=save_model_flag,
-                        demonstrations=demonstrations_normalized,
-                        robot=robot)
+    network = CustomMLP(model_id=model_id, load_model_flag=load_model_flag, save_model_flag=save_model_flag, demonstrations=demonstrations_normalized, robot=robot)
 
     model = network.model
     data_vis.set_network(network)
@@ -120,17 +106,8 @@ if __name__ == '__main__':
     ############################################################################################################
     # Train or load network
     ############################################################################################################
-    print("Normalization bounds before training:")
-    print(f'inp_min:', demonstrations_normalized['inp_min'])
-    print(f'inp_max:', demonstrations_normalized['inp_max'])
-    print("out_min:", demonstrations_normalized['Dq_min'])
-    print("out_max:", demonstrations_normalized['Dq_max'])
-
     if train:
-        network.train_network(robot, num_iterations=num_iterations,
-                              steps=nb_steps, stride=stride, verbose=True,
-                              batch_size=batch_size, verbose_every=500,
-                              decouple_arms=decouple_arms)
+        network.train_network(robot, num_iterations=num_iterations, steps=nb_steps, stride=stride, verbose=True, batch_size=batch_size, verbose_every=100, decouple_arms=decouple_arms)
     if network.save_model_flag:
         network.save_model(model_id=network.model_id)
 
@@ -139,8 +116,7 @@ if __name__ == '__main__':
     ############################################################################################################
     # Evaluate network's performance — full trajectory simulation
     ############################################################################################################
-    horizon        = min(traj.shape[0] for traj in network.demonstrations['train_in'])
-    goal_conditioned = conditioning == 'goal'
+    horizon = min(traj.shape[0] for traj in network.demonstrations['train_in'])
 
     demo_config_train = dict(
         demo_labels=['original', f'{G}'],
@@ -160,6 +136,6 @@ if __name__ == '__main__':
                              demonstrations_eval_test, demonstrations_eval_train,
                              title_prefix='Full Evaluation',
                              save_plots=save_plots, save_trajs=False,
-                             goal_conditioned=goal_conditioned)
+                             goal_conditioned=False)
 
     plt.show()

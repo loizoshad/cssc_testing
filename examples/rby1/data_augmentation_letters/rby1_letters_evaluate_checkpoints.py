@@ -41,10 +41,9 @@ from utils.networks_pytorch import CustomMLP, NETWORKS_DIR_RBY1
 
 device = torch.device("cuda" if torch.cuda.is_available() else "mps"  if torch.backends.mps.is_available() else "cpu" )
 
-# ─────────────────────────────────────────────────────────────────────────────
+###################################
 # CONFIGURATION — edit here
-# ─────────────────────────────────────────────────────────────────────────────
-
+###################################
 # Fixed random seed for the val / eval demo split (reproducible)
 SPLIT_SEED = 42
 

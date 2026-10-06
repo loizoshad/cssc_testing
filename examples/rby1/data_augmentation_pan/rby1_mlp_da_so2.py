@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 from utils.groups import *
 from utils.utils import *
 from utils.networks_pytorch import CustomMLP
-from utils.robot_vis import PlanarRobotVisualizer
 
 cols = shutil.get_terminal_size().columns
 np.set_printoptions(precision = 8, suppress = True, linewidth=cols)
@@ -182,12 +181,9 @@ if __name__ == '__main__':
     # Network settings
     ############################################################################################################    
     # num_iterations = 100000
-    # num_iterations = 10001
     num_iterations = 1000
-    # num_iterations = 20000
 
     step = 5.0
-
     nb_steps = 15
     stride = 10
 
@@ -195,8 +191,8 @@ if __name__ == '__main__':
     
     train = True
     load_model_flag = False
-    save_model_flag = False
-    save_plots = False
+    save_model_flag = True
+    save_plots = True
     save_loss = False
     
     data_augmentation = True
@@ -236,86 +232,36 @@ if __name__ == '__main__':
                                                                                       train_demo_types=['original', 'C2RBY1', 'SO2RBY1', 'Scaling2', 'SO2Scaling2Group', 'C2SO2Scaling2Group'], 
                                                                                       num_train_demos_per_type=[num_original, 0, num_so2, 0, 0, 0])
 
-    # print(f'train_in  len = {demonstrations_normalized["train_in"][0].shape}')
-    # print(f'train_out len = {demonstrations_normalized["train_out"][0].shape}')
 
-    # print(f'train_in  len = {demonstrations_normalized["train_in"][0][-4:, :]}')
-    # print(f'train_out len = {demonstrations_normalized["train_out"][0][-4:, :]}')
-
-
-    # traj = demonstrations["train_in"][0][0, :]
-    # print(f'INIT')
-    # print(f'symm cond init traj = {traj[-3:]}')
-    # print(f"'left_arm': np.array({traj[:7].tolist()}),")
-    # print(f"'right_arm': np.array({traj[7:14].tolist()})")
-    # traj = demonstrations["train_in"][0][-1, :]
-    # print(f'TARGET')
-    # print(f'symm cond target traj = {traj[-3:]}')
-    # print(f"'left_arm': np.array({traj[:7].tolist()}),")
-    # print(f"'right_arm': np.array({traj[7:14].tolist()})")
-    # exit()
-
-    # so2_train_step       = np.deg2rad(step)          # one training angle every 20°
-    # scaling_train_values = list(np.arange(1.0, 0.1-0.01, -np.deg2rad(step)))  # 5 evenly spaced scaling values from 0.1 to 1.0
-    # demonstrations, demonstrations_normalized = split_train_test(
-    #     demonstrations, demonstrations_normalized,
-    #     so2_train_step=so2_train_step,
-    #     scaling_train_values=scaling_train_values,
-    #     original_train_indices=None,   # or e.g. [0, 2, 4] for explicit picks
-    #     max_original_demos=2,       # or e.g. 5  to keep only 5 of the originals
-    #     max_demos_per_cell=2,       # or e.g. 5  to cap demos per (SO2, Scaling2) cell
-    #     axis_match_tolerance=np.deg2rad(step) / 2,   # half the augmentation step
-    # )
-    network = CustomMLP(model_id=model_id, load_model_flag=load_model_flag, save_model_flag=save_model_flag, 
-                        demonstrations=demonstrations_normalized, 
-                        robot=robot)
+    network = CustomMLP(model_id=model_id, load_model_flag=load_model_flag, save_model_flag=save_model_flag, demonstrations=demonstrations_normalized, robot=robot)
 
     model = network.model
     data_vis.set_network(network)
     ############################################################################################################
     # Train or load network
     ############################################################################################################
-    # Print normalization bounds before training:
-    print("Normalization bounds before training:")
-    print(f'inp_min:', demonstrations_normalized['inp_min'])
-    print(f'inp_max:', demonstrations_normalized['inp_max'])
-    print("out_min:", demonstrations_normalized['Dq_min'])
-    print("out_max:", demonstrations_normalized['Dq_max'])
-
     if train:
-        network.train_network(robot, num_iterations=num_iterations, steps=nb_steps, stride=stride, verbose=True, batch_size=batch_size, verbose_every=500, decouple_arms=decouple_arms)
+        network.train_network(robot, num_iterations=num_iterations, steps=nb_steps, stride=stride, verbose=True, batch_size=batch_size, verbose_every=100, decouple_arms=decouple_arms)
     if network.save_model_flag:
         network.save_model(model_id=network.model_id)
 
     data_vis.plot_loss_history(network, save_plots=False)
-    ############################################################################################################
-    # Evaluate network's performance - 1-step predictions on train and test data
-    ############################################################################################################
-    # data_vis.plot_1step_predictions(network, len(demonstrations['train_in']), save_plots=save_plots)
-
     # ###########################################################################################################
     # Evaluate network's performance - Full trajectory simulation
     # ###########################################################################################################
     horizon = min([traj.shape[0] for traj in network.demonstrations['train_in']])
-    goal_conditioned = True if conditioning == 'goal' else False
 
-    #### V1: Choose randomly
+    #### Choose randomly
     demo_config_train = dict(
         demo_labels=['original', 'SO2RBY1'],
         num_of_demos = [2, 2]
     )
-    # demo_config_test = dict(
-    #     demo_labels=['original', 'C2RBY1'],
-    #     num_of_demos = [4, 4]
-    # )
 
-    goal_conditioned = True if conditioning == 'goal' else False
-    # demonstrations_eval_test = choose_demos_for_evaluation(network.demonstrations, config=demo_config_test, use_train = False)
     demonstrations_eval_train = choose_demos_for_evaluation(network.demonstrations, config=demo_config_train, use_train = True)
     demonstrations_eval_test = demonstrations_eval_train # NOTE: We don't care about test trajectories at the moment. Just trying to get proof of concept.
     demonstrations_eval_test = []
 
-    evaluate_full_trajectory(network, data_vis, robot, horizon, demonstrations_eval_test, demonstrations_eval_train, title_prefix='Full Evaluation', save_plots=save_plots, save_trajs=False, goal_conditioned=goal_conditioned)
+    evaluate_full_trajectory(network, data_vis, robot, horizon, demonstrations_eval_test, demonstrations_eval_train, title_prefix='Full Evaluation', save_plots=save_plots, save_trajs=False, goal_conditioned=False)
         
     plt.show()
 

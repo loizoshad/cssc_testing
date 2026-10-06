@@ -7,8 +7,6 @@ import time
 
 import torch
 from utils.groups import *
-from utils.groups import _n_steps, _signed_dt   # private helpers needed for diagnostics
-# from utils.groups_rby1 import *
 from utils.utils import *
 
 cols = shutil.get_terminal_size().columns
@@ -19,11 +17,21 @@ ROOT_DIR    = Path(CURRENT_DIR).parent.parent.resolve()
 device      = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 print(f'device: {device}')
 
+# Pan dataset constants (task_space='xyz_theta')
+_PAN_TASK   = 'left-rby1-all_right-rby1-all_ndofs-14'
+_PAN_FOLDER = 'rby1_pan_v1'
+_PAN_TS     = 'xyz_theta'   # [x, y, z, yaw] per arm — planar pan experiment
+
+# ── Letters dataset factory functions (task_space='yz_in_6d') ─────────────────
+_LETTERS_TASK   = 'left-rby1-letters_right-rby1-letters_ndofs-14'
+_LETTERS_FOLDER = 'rby1_letters'
+_LETTERS_TS     = 'yz_in_6d'
+
 
 # TASK_SPACE = 'xyz_theta'
 TASK_SPACE = 'yz'
 # Integration step sizes — tune independently for rotation and scaling.
-# Smaller dt → more Euler steps → more accurate but slower augmentation.
+# Smaller dt -> more Euler steps -> more accurate but slower augmentation.
 # DT_SO2      = np.deg2rad(0.5)
 
 # DT_SO2      = np.deg2rad(5.0)
@@ -289,14 +297,10 @@ SCALE_BOUND_MAX=1.0
 # theta_bound = 30   # degrees
 # theta_bound = 20   # degrees
 # SCALE_BOUND_MIN = 0.4
-PERM        = np.array([1., -1., -1., 1., -1., 1., -1.])   # RBY1 joint sign flips
+PERM = np.array([1., -1., -1., 1., -1., 1., -1.])   # RBY1 joint sign flips
 
 
-# ── Per-group factory functions ───────────────────────────────────────────────
-# Each takes (robot, dt, task_space) and returns (group, rep_in, rep_out).
-# Adding a new symmetry configuration only requires:
-#   1. writing a _build_* function below
-#   2. adding an entry to GROUP_CONFIGS
+## Per-group functions
 
 def _build_C2RBY1(robot, dt, task_space, dt_so2=None, dt_scaling2=None, **kwargs):
     G  = C2RBY1(permutator=np.array([1, 1]))
@@ -327,7 +331,7 @@ def _build_C2Scaling2RBY1(robot, dt, task_space, dt_so2=None, dt_scaling2=None, 
     kw  = dict(G=G, robot=robot, is_vf_constant=False, dt=_dt, is_taskspace=False, task_space=task_space)
     return G, C2Scaling2RBY1RepIn(**kw), C2Scaling2RBY1RepOut(**kw)
 
-# ── Per-arm composite symmetry configurations ─────────────────────────────────
+# Per-arm composite symmetry configurations
 
 def _build_C2LeftC2SO2RightRBY1(robot, dt, task_space, dt_so2=None, dt_scaling2=None, **kwargs):
     G  = C2SO2RBY1(name='C2LeftC2SO2RightRBY1')
@@ -362,12 +366,6 @@ def _build_C2SO2Scaling2LeftC2RightRBY1(robot, dt, task_space, dt_so2=None, dt_s
     return G, CompositeRepIn(**kw), CompositeRepOut(**kw)
 
 
-# ── Pan dataset constants (task_space='xyz_theta') ────────────────────────────
-_PAN_TASK   = 'left-rby1-all_right-rby1-all_ndofs-14'
-_PAN_FOLDER = 'rby1_pan_v1'
-_PAN_TS     = 'xyz_theta'   # [x, y, z, yaw] per arm — planar pan experiment
-
-
 def _build_SO2Pan(robot, dt, task_space, dt_so2=None, dt_scaling2=None, **kwargs):
     """SO2 augmentation for the pan dataset.
 
@@ -383,7 +381,6 @@ def _build_SO2Pan(robot, dt, task_space, dt_so2=None, dt_scaling2=None, **kwargs
                right_spec=ArmSymSpec(so2=True, task_space=task_space, center_on_ee=True))
     return G, CompositeRepIn(**kw), CompositeRepOut(**kw)
 
-
 def _build_C2SO2Pan(robot, dt, task_space, dt_so2=None, dt_scaling2=None, **kwargs):
     """C2+SO2 augmentation for the pan dataset (both arms symmetric).
 
@@ -396,13 +393,6 @@ def _build_C2SO2Pan(robot, dt, task_space, dt_so2=None, dt_scaling2=None, **kwar
                left_spec =ArmSymSpec(so2=True, task_space=task_space, center_on_ee=True),
                right_spec=ArmSymSpec(so2=True, task_space=task_space, center_on_ee=True))
     return G, CompositeRepIn(**kw), CompositeRepOut(**kw)
-
-
-# ── Letters dataset factory functions (task_space='yz_in_6d') ─────────────────
-_LETTERS_TASK   = 'left-rby1-letters_right-rby1-letters_ndofs-14'
-_LETTERS_FOLDER = 'rby1_letters'
-_LETTERS_TS     = 'yz_in_6d'
-
 
 def compute_letter_centers(task: str, demo_folder: str):
     """Compute the convex-hull centroid of the EE letter trajectories for each arm.
@@ -433,7 +423,6 @@ def compute_letter_centers(task: str, demo_folder: str):
     center_left  = hull_centroid(pts[:, :2])
     center_right = hull_centroid(pts[:, 2:4])
     return center_left, center_right
-
 
 def _build_SO2Letters(robot, dt, task_space, center_left=None, center_right=None,
                       dt_so2=None, dt_scaling2=None):

@@ -29,7 +29,7 @@ unzip -q files_for_paper_reproduction.zip && rm files_for_paper_reproduction.zip
 
 ## 3. Reproduce the paper results (planar dual arm)
 
-| Command | Reproduces | <nobr> Runtime (min) on MPS </nobr> | Output |
+| Script | Reproduces | <nobr> Runtime (min) on MPS </nobr> | Output |
 |---|---|---|---|
 | `planar_robot_rmse_table` | Tab. II | ~3| `results/planar_paper/cross_eval_rmse.csv` |
 | `planar_robot_writte_letter_plots` | Fig. 4 & 5b | ~1 | `results/planar_paper/figures/` |

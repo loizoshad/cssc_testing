@@ -27,9 +27,13 @@ echo "f26ad015aa2cd56122ca5c0702027264a81ef93cd71693f6dacd90f7193165c1 files_for
 unzip -q files_for_paper_reproduction.zip && rm files_for_paper_reproduction.zip
 ```
 
-## 3. Reproduce the paper results (planar dual arm)
+## 3. Evaluate trained policies
 
-| Script | Reproduces | <nobr> Runtime (min) on MPS </nobr> | Output |
+The scripts below can be used to evaluate a policy you trained.
+By default, they evaluate the pre-trained policies on the augmented datasets that were used to generate the results of the relevant scientific article.
+Note that this assumes you have installed the github release from above as it contains the trained policy weights and augmented datasets used to generate the results of the paper.
+
+| Script | Generates | <nobr> Runtime (min) on MPS </nobr> | Output |
 |---|---|---|---|
 | `planar_robot_rmse_table` | Tab. II | ~3| `results/planar_paper/cross_eval_rmse.csv` |
 | `planar_robot_writte_letter_plots` | Fig. 4 & 5b | ~1 | `results/planar_paper/figures/` |
@@ -40,6 +44,8 @@ python -m evaluation.planar_robot_rmse_table
 python -m evaluation.planar_robot_writte_letter_plots
 python -m evaluation.planar_robot_so2_density
 ```
+
+If everything runs correctly, you should see a progress bar indicating the level of completion of the evaluation.
 
 ## 4. Generate, augment and train your own (planar dual arm)
 

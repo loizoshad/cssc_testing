@@ -66,7 +66,7 @@ class CustomNetworks:
         if intermediate_save and self.save_model_flag:
             net_dir = NETWORKS_DIR_RBY1 if 'RBY1' in self.model_id else NETWORKS_DIR
             torch.save(self.model.state_dict(), os.path.join(net_dir, 'models', f'{model_id}' + '.pt'))
-            print(f'[INFO] Intermediate model saved to {model_id}_iter{current_iteration}.pt')
+            print(f'[INFO] Intermediate model saved to {model_id}.pt')
 
     def load_model(self, model_id = None):
         if model_id is None:

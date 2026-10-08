@@ -3,6 +3,7 @@ import csv
 import sys
 from pathlib import Path
 
+from tqdm import tqdm
 import numpy as np
 import torch
 
@@ -107,15 +108,26 @@ def check_inputs(files):
 def compute_table(verbose=True):
     """results[policy][category] = {'rmse', 'std', 'n'}"""
     robot = create_two_arm_robot(nb_dofs_left=4, nb_dofs_right=4, nb_x_left=2, nb_x_right=2, ee_joint=False)
+    # one bar step per dataset load and per (policy, category) evaluation; the postfix names the running step
+    bar = tqdm(total=1 + len(POLICIES) * (1 + len(CATEGORIES)), desc='RMSE table', disable=not verbose)
+    bar.set_postfix_str('loading test pool')
     pool = build_test_pool()
+    bar.update()
     if verbose:
-        print('test pool: ' + ', '.join(f'{c}={len(t)}' for c, t in pool.items()))
+        bar.write('test pool: ' + ', '.join(f'{c}={len(t)}' for c, t in pool.items()))
     results = {}
     for name, (checkpoint, dataset) in POLICIES.items():
+        bar.set_postfix_str(f'loading {name}')
         net = load_policy(checkpoint, dataset, robot)
-        results[name] = {category: evaluate(net, pool[category], robot) for category in CATEGORIES}
+        bar.update()
+        results[name] = {}
+        for category in CATEGORIES:
+            bar.set_postfix_str(f'{name} on {category}')
+            results[name][category] = evaluate(net, pool[category], robot)
+            bar.update()
         if verbose:
-            print(f'{name:14s} ' + '  '.join(f'{c}: {r["rmse"]:.3f}±{r["std"]:.3f}' for c, r in results[name].items()))
+            bar.write(f'{name:14s} ' + '  '.join(f'{c}: {r["rmse"]:.3f}±{r["std"]:.3f}' for c, r in results[name].items()))
+    bar.close()
     return results
 
 

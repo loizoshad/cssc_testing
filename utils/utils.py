@@ -1402,6 +1402,7 @@ class DataVisualizer:
                     path = ROOT_DIR / 'results_rby1' / 'plots' / f"{self.network.model_id}_{self.task}_{title_prefix.replace(' ', '_')}_{suffix}.png"
                 else:
                     path = ROOT_DIR / 'results' / 'plots' / f"{self.network.model_id}{title_prefix.replace(' ', '_')}_{suffix}.png"
+                path.parent.mkdir(parents=True, exist_ok=True)
                 fig.savefig(path, dpi=300, bbox_inches='tight')
 
         # Resolve task_space for spatial plotting
@@ -1459,6 +1460,7 @@ class DataVisualizer:
         if save_plots:        
             filename = f"{self.network.model_id}_loss_history.png"
             filename = ROOT_DIR / 'results' / 'loss' / filename
+            filename.parent.mkdir(parents=True, exist_ok=True)
             fig3.savefig(filename, dpi=300, bbox_inches='tight')
             # Save loss history as a text file
             loss_filename = f"{self.network.model_id}_loss_history.txt"
@@ -1558,6 +1560,7 @@ class DataVisualizer:
         if save_plots:
             filename = f"{network.model_id}_1step_predictions_train.png"
             filename = ROOT_DIR / 'results' / 'plots' / filename
+            filename.parent.mkdir(parents=True, exist_ok=True)
             fig_train.savefig(filename, dpi=300, bbox_inches='tight')
 
         # Plot 1-step predictions for testing data
@@ -1592,6 +1595,7 @@ class DataVisualizer:
         if save_plots:
             filename = f"{network.model_id}_1step_predictions_test.png"
             filename = ROOT_DIR / 'results' / 'plots' / filename
+            filename.parent.mkdir(parents=True, exist_ok=True)
             fig_test.savefig(filename, dpi=300, bbox_inches='tight')
 
 

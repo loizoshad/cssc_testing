@@ -2,6 +2,7 @@ import argparse
 import random
 from pathlib import Path
 
+from tqdm import tqdm
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -199,24 +200,33 @@ def plot_category(category, gt, reference, policies, robot, bounds, path):
     plt.close(fig)
 
 
-def make_category_figures(out_dir, robot):
+def make_category_figures(out_dir, robot, bar):
+    bar.set_postfix_str('loading test pool')
     pool = table.build_test_pool()
+    bar.update()
     examples = pick_examples(pool)
-    policies = {name: table.load_policy(ckpt, dataset, robot) for name, (ckpt, dataset) in table.POLICIES.items()}
+    policies = {}
+    for name, (ckpt, dataset) in table.POLICIES.items():
+        bar.set_postfix_str(f'loading {name}')
+        policies[name] = table.load_policy(ckpt, dataset, robot)
+        bar.update()
     all_x = [to_task_space(t[:, :robot.nb_dofs], robot) for t in examples.values()]
     bounds = figure_bounds(all_x + [all_x[0]])   # all examples + the original reference (== the 'original' example)
     paths = []
     for category in FIGURES:
+        bar.set_postfix_str(f'plotting traj_{category}')
         reference = None if category == 'original' else examples['original']
         paths.append(Path(out_dir) / f'traj_{category}.pdf')
         plot_category(category, examples[category], reference, policies, robot, bounds, paths[-1])
+        bar.update()
     return paths
 
 
 # ════════════════════════════════════════════════════════════════════════════════════════════════
 #  traj_at_..._letter_C.pdf
 # ════════════════════════════════════════════════════════════════════════════════════════════════
-def make_letter_figure(out_dir, robot):
+def make_letter_figure(out_dir, robot, bar):
+    bar.set_postfix_str('loading SO2 1-degree dataset')
     data_vis = DataVisualizer(task=density.TASK, conditioning='symmetry', normalize_conditioning=False)
     demos, demos_norm = data_vis.construct_demonstrations(demo_folder=density.DATASET_FOLDER,
                                                           load_augmented_data=True, predefined_dataset=density.DATASET)
@@ -224,10 +234,12 @@ def make_letter_figure(out_dir, robot):
             for t, kind in zip(demos['test_in'], demos['test_in_demo_type']) if kind == 'original' or 'SO2' in kind]
     colors = {step: density.COLORS[list(density.STEPS).index(step)] for step in LETTER_STEPS}
     nets = {step: density.load_policy(step, demos_norm, robot) for step in LETTER_STEPS}
+    bar.update()
     left = slice(0, 2)   # task-space columns of the left arm (the letter C)
     with plt.rc_context(LETTER_STYLE):
         fig, ax = plt.subplots(figsize=(3.8, 3.8))
         for target in LETTER_ANGLES:
+            bar.set_postfix_str(f'plotting letter C at {target:+.0f} deg')
             gt = next(t for t, angle in test if abs(angle - target) <= LETTER_ANGLE_TOL)   # first match in file order
             style_axes(ax)
             gt_x = to_task_space(gt[:, :robot.nb_dofs], robot)[:, left]
@@ -239,6 +251,7 @@ def make_letter_figure(out_dir, robot):
                 ax.plot(x[:, 0], x[:, 1], color=colors[step], linewidth=2.5, linestyle='-', zorder=2)
                 ax.scatter(x[0, 0], x[0, 1], s=50, c=colors[step], zorder=5, marker='o', edgecolors='white', linewidths=1.0)
                 ax.scatter(x[-1, 0], x[-1, 1], s=90, c=colors[step], zorder=5, marker='x', linewidths=1.8)
+            bar.update()
         plt.tight_layout(pad=0.4)
         tags = '_'.join(f'{a:+.0f}' for a in LETTER_ANGLES)
         path = Path(out_dir) / f'traj_at_{tags}deg_letter_C.pdf'
@@ -252,11 +265,14 @@ def required_files():
     return table.required_files() + density.required_files(LETTER_STEPS)
 
 
-def make_all(out_dir=ROOT_DIR / 'results' / 'planar_paper' / 'figures'):
+def make_all(out_dir=ROOT_DIR / 'results' / 'planar_paper' / 'figures', verbose=True):
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     robot = create_two_arm_robot(nb_dofs_left=4, nb_dofs_right=4, nb_x_left=2, nb_x_right=2, ee_joint=False)
-    return make_category_figures(out_dir, robot) + [make_letter_figure(out_dir, robot)]
+    # one bar step per dataset load, policy load and drawn figure / letter angle; the postfix names the running step
+    total = 1 + len(table.POLICIES) + len(FIGURES) + 1 + len(LETTER_ANGLES)
+    with tqdm(total=total, desc='Figures', disable=not verbose) as bar:
+        return make_category_figures(out_dir, robot, bar) + [make_letter_figure(out_dir, robot, bar)]
 
 
 def main():

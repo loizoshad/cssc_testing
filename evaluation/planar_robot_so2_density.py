@@ -2,6 +2,7 @@ import argparse
 import csv
 from pathlib import Path
 
+from tqdm import tqdm
 import numpy as np
 import torch
 
@@ -89,13 +90,23 @@ def required_files(steps=None):
 def compute(steps=None, verbose=True):
     """results[step][angle_deg] = [RMSE of each test trajectory at that angle]"""
     robot = create_two_arm_robot(nb_dofs_left=4, nb_dofs_right=4, nb_x_left=2, nb_x_right=2, ee_joint=False)
+    if verbose:
+        print(f'loading {DATASET_FOLDER}/{DATASET} ...', flush=True)
     by_angle, demos_norm = load_dataset()
+    steps = steps or list(STEPS)
+    # one bar step per (step size, test angle) evaluation; the postfix names the running step
+    bar = tqdm(total=len(steps) * len(by_angle), desc='SO2 density', disable=not verbose)
     results = {}
-    for step in (steps or STEPS):
+    for step in steps:
         net = load_policy(step, demos_norm, robot)
-        results[step] = {angle: rmse_per_trajectory(net, trajs, robot) for angle, trajs in by_angle.items()}
+        results[step] = {}
+        for angle, trajs in by_angle.items():
+            bar.set_postfix_str(f'step {step:g} deg, angle {angle:g} deg')
+            results[step][angle] = rmse_per_trajectory(net, trajs, robot)
+            bar.update()
         if verbose:
-            print(f'SO2 {step:g} deg: {len(by_angle)} angles, mean RMSE {np.mean([np.mean(v) for v in results[step].values()]):.4f}')
+            bar.write(f'SO2 {step:g} deg: {len(by_angle)} angles, mean RMSE {np.mean([np.mean(v) for v in results[step].values()]):.4f}')
+    bar.close()
     return results
 
 

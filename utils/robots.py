@@ -11,6 +11,9 @@ from torch.func import jacrev, vmap, jvp
 
 import pytorch_kinematics as pk
 
+# use this to silence the URDF parser's warnings about missing inertial and visual elements in the RBY1 URDF. This does not affect the functionality of the kinematics chains for our purposes.
+from pytorch_kinematics.urdf_parser_py.xml_reflection import core as _urdf_xml
+_urdf_xml.on_error = lambda message: None
 
 # ── RBY1 FK chains (built once, shared across all RBY1SingleArm instances) ─────
 _RBY1_URDF_PATH = Path(__file__).parent.parent / "urdf" / "rby1a" / "model.urdf"

@@ -1045,9 +1045,9 @@ class DataVisualizer:
             self.inp_min   = np.where(is_tiny, mid - MIN_FEATURE_RANGE / 2.0, self.inp_min)
             self.inp_max   = np.where(is_tiny, mid + MIN_FEATURE_RANGE / 2.0, self.inp_max)
             tiny_dims      = np.where(is_tiny)[0].tolist()
-            print(f"[normalize_demonstrations] WARNING: {len(tiny_dims)} near-constant "
-                  f"feature(s) detected (dims {tiny_dims}). "
-                  f"Clamping normalisation range to {MIN_FEATURE_RANGE}.")
+            # print(f"[normalize_demonstrations] WARNING: {len(tiny_dims)} near-constant "
+            #       f"feature(s) detected (dims {tiny_dims}). "
+            #       f"Clamping normalisation range to {MIN_FEATURE_RANGE}.")
 
         # split into Q and X components
         demonstrations['inp_min'] = self.inp_min
